@@ -17,14 +17,14 @@ import threading
 import time
 import urllib2
 
-VERSION = "2.0"
+VERSION = "2.1"
 BANNER = """
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+
 |f||e||t||c||h||-||s||o||m||e||-||p||r||o||x||i||e||s| <- v%s
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+""".strip("\r\n") % VERSION
 FALLBACK_METHOD = False
 IFCONFIG_URL = "http://ipecho.net/plain"
-PROXY_LIST_URL = "https://hidester.com/proxydata/php/data.php?mykey=csv&country=&port=&type=undefined&anonymity=undefined&ping=undefined&gproxy=2"
+PROXY_LIST_URL = "https://hidester.com/proxydata/php/data.php?mykey=csv&gproxy=2"
 ROTATION_CHARS = ('/', '-', '\\', '|')
 TIMEOUT = 10
 THREADS = 10
@@ -90,7 +90,10 @@ def main():
     FALLBACK_METHOD = re.search(r"\d+\.\d+\.\d+\.\d+", stdout or "") is None
 
     sys.stdout.write("[i] retrieving list of proxies...\n")
-    proxies = json.loads(retrieve(PROXY_LIST_URL))
+    try:
+        proxies = json.loads(retrieve(PROXY_LIST_URL))
+    except:
+        exit("[!] something went wrong during the proxy list retrieval/parsing. Please check your network settings and try again")
     random.shuffle(proxies)
 
     _, filepath = tempfile.mkstemp(prefix="proxies", suffix=".txt")
