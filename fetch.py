@@ -158,7 +158,7 @@ def main():
     parser = optparse.OptionParser(version=VERSION)
     parser.add_option("--anonymity", dest="anonymity", help="Regex for filtering anonymity (e.g. \"anonymous|elite\")")
     parser.add_option("--country", dest="country", help="Regex for filtering country (e.g. \"china|brazil\")")
-    parser.add_option("--max-latency", dest="maxLatency", type=int, help="Maximum (tolerable) latency (default %d)" % TIMEOUT)
+    parser.add_option("--max-latency", dest="maxLatency", type=int, help="Maximum (tolerable) latency in seconds (default %d)" % TIMEOUT)
     parser.add_option("--threads", dest="threads", type=int, help="Number of scanning threads (default %d)" % THREADS)
 
     def _(self, *args):
@@ -170,7 +170,11 @@ def main():
     parser.formatter._format_option_strings = parser.formatter.format_option_strings
     parser.formatter.format_option_strings = type(parser.formatter.format_option_strings)(_, parser, type(parser))
 
-    options, _ = parser.parse_args()
+    try:
+        options, _ = parser.parse_args()
+    except SystemExit:
+        print
+        raise
 
     run()
 
