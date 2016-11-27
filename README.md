@@ -5,7 +5,7 @@ Simple Python tool for fetching "some" (usable) proxies. It fetches list of publ
 
 Why should you use it? Well, if you've ever used free proxy lists around you'll know the pain of finding those proxies that are actually working. This tool will automatically do the list fetching and proxy testing for you.
 
-![fetch](http://i.imgur.com/Z3LmjLp.png)
+![fetch](https://i.imgur.com/Wtyn3GR.png)
 
 Requirements
 ----
