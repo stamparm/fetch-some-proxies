@@ -99,12 +99,14 @@ def run():
         exit("[!] something went wrong during the proxy list retrieval/parsing. Please check your network settings and try again")
     random.shuffle(proxies)
 
-    if options.country or options.anonymity:
+    if options.country or options.anonymity or options.type:
         _ = []
         for proxy in proxies:
             if options.country and not re.search(options.country, proxy["country"], re.I):
                 continue
             if options.anonymity and not re.search(options.anonymity, "%s (%s)" % (proxy["anonymity"], ANONIMITY_LEVELS.get(proxy["anonymity"].lower(), "")), re.I):
+                continue
+            if options.type and not re.search(options.type, proxy["type"], re.I):
                 continue
             _.append(proxy)
         proxies = _
@@ -160,6 +162,7 @@ def main():
     parser.add_option("--country", dest="country", help="Regex for filtering country (e.g. \"china|brazil\")")
     parser.add_option("--max-latency", dest="maxLatency", type=float, help="Maximum (tolerable) latency in seconds (default %d)" % TIMEOUT)
     parser.add_option("--threads", dest="threads", type=int, help="Number of scanning threads (default %d)" % THREADS)
+    parser.add_option("--type", dest="type", help="Regex for filtering proxy type (e.g. \"http\")")
 
     def _(self, *args):
         retVal = parser.formatter._format_option_strings(*args)
