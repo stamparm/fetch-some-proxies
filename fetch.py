@@ -18,7 +18,7 @@ import threading
 import time
 import urllib2
 
-VERSION = "2.5"
+VERSION = "2.51"
 BANNER = """
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+
 |f||e||t||c||h||-||s||o||m||e||-||p||r||o||x||i||e||s| <- v%s
@@ -41,10 +41,10 @@ options = None
 counter = [0]
 threads = []
 
-def retrieve(url, data=None, headers={"User-agent": USER_AGENT}, timeout=TIMEOUT):
+def retrieve(url, data=None, headers={"User-agent": USER_AGENT}, timeout=TIMEOUT, opener=None):
     try:
         req = urllib2.Request("".join(url[i].replace(' ', "%20") if i > url.find('?') else url[i] for i in xrange(len(url))), data, headers)
-        retval = urllib2.urlopen(req, timeout=timeout).read()
+        retval = (urllib2.urlopen if not opener else opener.open)(req, timeout=timeout).read()
     except Exception as ex:
         try:
             retval = ex.read() if hasattr(ex, "read") else getattr(ex, "msg", str())
@@ -70,8 +70,7 @@ def worker(queue, handle=None):
                 result, _ = process.communicate()
             elif proxy["type"] in ("http", "https"):
                 opener = urllib2.build_opener(urllib2.ProxyHandler({"http": candidate, "https": candidate}))
-                urllib2.install_opener(opener)
-                result = retrieve(IFCONFIG_URL, timeout=options.maxLatency or TIMEOUT)
+                result = retrieve(IFCONFIG_URL, timeout=options.maxLatency or TIMEOUT, opener=opener)
             if (result or "").strip() == proxy["IP"].encode("utf8"):
                 latency = time.time() - start
                 if latency < (options.maxLatency or TIMEOUT):
