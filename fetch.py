@@ -164,6 +164,7 @@ def main():
     parser.add_option("--threads", dest="threads", type=int, help="Number of scanning threads (default %d)" % THREADS)
     parser.add_option("--type", dest="type", help="Regex for filtering proxy type (e.g. \"http\")")
 
+    # Dirty hack(s) for help message
     def _(self, *args):
         retVal = parser.formatter._format_option_strings(*args)
         if len(retVal) > MAX_HELP_OPTION_LENGTH:
@@ -172,6 +173,10 @@ def main():
 
     parser.formatter._format_option_strings = parser.formatter.format_option_strings
     parser.formatter.format_option_strings = type(parser.formatter.format_option_strings)(_, parser, type(parser))
+
+    for _ in ("-h", "--version"):
+        option = parser.get_option(_)
+        option.help = option.help.capitalize()
 
     try:
         options, _ = parser.parse_args()
