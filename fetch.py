@@ -71,7 +71,7 @@ def worker(queue, handle=None):
             elif proxy["type"] in ("http", "https"):
                 opener = urllib2.build_opener(urllib2.ProxyHandler({"http": candidate, "https": candidate}))
                 urllib2.install_opener(opener)
-                result = retrieve(IFCONFIG_URL, timeout=conf.maxLatency or TIMEOUT)
+                result = retrieve(IFCONFIG_URL, timeout=options.maxLatency or TIMEOUT)
             if (result or "").strip() == proxy["IP"].encode("utf8"):
                 latency = time.time() - start
                 if latency < (options.maxLatency or TIMEOUT):
