@@ -18,7 +18,7 @@ import threading
 import time
 import urllib2
 
-VERSION = "2.51"
+VERSION = "2.6"
 BANNER = """
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+
 |f||e||t||c||h||-||s||o||m||e||-||p||r||o||x||i||e||s| <- v%s
@@ -93,7 +93,7 @@ def run():
 
     sys.stdout.write("[i] retrieving list of proxies...\n")
     try:
-        proxies = json.loads(retrieve(PROXY_LIST_URL))
+        proxies = json.loads(retrieve(PROXY_LIST_URL, headers={"User-agent": USER_AGENT, "Referer": "https://hidester.com/proxylist/"}))
     except:
         exit("[!] something went wrong during the proxy list retrieval/parsing. Please check your network settings and try again")
     random.shuffle(proxies)
