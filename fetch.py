@@ -18,7 +18,7 @@ import threading
 import time
 import urllib2
 
-VERSION = "2.6"
+VERSION = "2.61"
 BANNER = """
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+
 |f||e||t||c||h||-||s||o||m||e||-||p||r||o||x||i||e||s| <- v%s
@@ -151,6 +151,7 @@ def run():
         sys.stderr.flush()
         handle.flush()
         handle.close()
+        os._exit(0)
 
 def main():
     global options
