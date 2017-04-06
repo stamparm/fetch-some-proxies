@@ -18,7 +18,7 @@ import threading
 import time
 import urllib2
 
-VERSION = "2.61"
+VERSION = "2.62"
 BANNER = """
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+
 |f||e||t||c||h||-||s||o||m||e||-||p||r||o||x||i||e||s| <- v%s
@@ -26,7 +26,7 @@ BANNER = """
 
 ANONIMITY_LEVELS = {"elite": "high", "anonymous": "medium", "transparent": "low"}
 FALLBACK_METHOD = False
-IFCONFIG_URL = "http://ipecho.net/plain"
+IFCONFIG_URL = "https://api.ipify.org/?format=text"
 MAX_HELP_OPTION_LENGTH = 18
 PROXY_LIST_URL = "https://hidester.com/proxydata/php/data.php?mykey=csv&gproxy=2"
 ROTATION_CHARS = ('/', '-', '\\', '|')
