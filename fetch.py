@@ -18,7 +18,7 @@ import threading
 import time
 import urllib2
 
-VERSION = "2.62"
+VERSION = "2.63"
 BANNER = """
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+
 |f||e||t||c||h||-||s||o||m||e||-||p||r||o||x||i||e||s| <- v%s
