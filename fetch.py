@@ -26,7 +26,8 @@ BANNER = """
 
 ANONIMITY_LEVELS = {"elite": "high", "anonymous": "medium", "transparent": "low"}
 FALLBACK_METHOD = False
-IFCONFIG_URL = "https://api.ipify.org/?format=text"
+IFCONFIG_CANDIDATES = ("https://ifconfig.co/ip", "https://api.ipify.org/?format=text", "https://ifconfig.io/ip", "https://ifconfig.minidump.info/ip", "https://myexternalip.com/raw", "https://wtfismyip.com/text")
+IFCONFIG_URL = None
 MAX_HELP_OPTION_LENGTH = 18
 PROXY_LIST_URL = "https://hidester.com/proxydata/php/data.php?mykey=csv&gproxy=2"
 ROTATION_CHARS = ('/', '-', '\\', '|')
@@ -84,8 +85,15 @@ def worker(queue, handle=None):
 
 def run():
     global FALLBACK_METHOD
+    global IFCONFIG_URL
 
     sys.stdout.write("[i] initial testing...\n")
+
+    for candidate in IFCONFIG_CANDIDATES:
+        result = retrieve(candidate)
+        if re.search(r"\A\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\Z", (result or "").strip()):
+            IFCONFIG_URL = candidate
+            break
 
     process = subprocess.Popen("curl -m %d -A '%s' %s" % (TIMEOUT, USER_AGENT, IFCONFIG_URL), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, _ = process.communicate()
