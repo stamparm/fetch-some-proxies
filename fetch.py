@@ -17,6 +17,7 @@ import tempfile
 import threading
 import time
 import urllib2
+from multiprocessing import Lock
 
 VERSION = "2.63"
 BANNER = """
@@ -54,7 +55,7 @@ def retrieve(url, data=None, headers={"User-agent": USER_AGENT}, timeout=TIMEOUT
 
     return retval or ""
 
-def worker(queue, handle=None):
+def worker(queue, output_file, lock, handle=None):
     try:
         while True:
             proxy = queue.get_nowait()
@@ -80,6 +81,12 @@ def worker(queue, handle=None):
                         handle.flush()
                     sys.stdout.write("\r%s%s # latency: %.2f sec; country: %s; anonymity: %s (%s)\n" % (candidate, " " * (32 - len(candidate)), latency, ' '.join(_.capitalize() for _ in (proxy["country"].lower() or '-').split(' ')), proxy["anonymity"].lower() or '-', ANONIMITY_LEVELS.get(proxy["anonymity"].lower(), '-')))
                     sys.stdout.flush()
+                    if output_file != '':
+                        lock.acquire()
+                        f = open(output_file, "a")
+                        f.writelines(candidate + '\n')
+                        f.close()
+                        lock.release()
     except Queue.Empty:
         pass
 
@@ -128,10 +135,11 @@ def run():
     queue = Queue.Queue()
     for proxy in proxies:
         queue.put(proxy)
-
+    
+    output_lock = Lock()
     sys.stdout.write("[i] testing %d proxies (%d threads)...\n\n" % (len(proxies), options.threads or THREADS))
     for _ in xrange(options.threads or THREADS):
-        thread = threading.Thread(target=worker, args=[queue, handle])
+        thread = threading.Thread(target=worker, args=[queue, options.output_file, output_lock, handle])
         thread.daemon = True
 
         try:
@@ -171,7 +179,8 @@ def main():
     parser.add_option("--max-latency", dest="maxLatency", type=float, help="Maximum (tolerable) latency in seconds (default %d)" % TIMEOUT)
     parser.add_option("--threads", dest="threads", type=int, help="Number of scanning threads (default %d)" % THREADS)
     parser.add_option("--type", dest="type", help="Regex for filtering proxy type (e.g. \"http\")")
-
+    parser.add_option("--output", dest="output_file", help="Output file path. Give a CSV formatted list of proxy", default="")
+    
     # Dirty hack(s) for help message
     def _(self, *args):
         retVal = parser.formatter._format_option_strings(*args)
