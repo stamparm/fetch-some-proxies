@@ -13,12 +13,11 @@ import random
 import re
 import string
 import subprocess
-import tempfile
 import threading
 import time
 import urllib2
 
-VERSION = "2.63"
+VERSION = "2.64"
 BANNER = """
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+
 |f||e||t||c||h||-||s||o||m||e||-||p||r||o||x||i||e||s| <- v%s
@@ -75,11 +74,10 @@ def worker(queue, handle=None):
             if (result or "").strip() == proxy["IP"].encode("utf8"):
                 latency = time.time() - start
                 if latency < (options.maxLatency or TIMEOUT):
-                    if handle:
-                        handle.write("%s%s" % (candidate, os.linesep))
-                        handle.flush()
                     sys.stdout.write("\r%s%s # latency: %.2f sec; country: %s; anonymity: %s (%s)\n" % (candidate, " " * (32 - len(candidate)), latency, ' '.join(_.capitalize() for _ in (proxy["country"].lower() or '-').split(' ')), proxy["anonymity"].lower() or '-', ANONIMITY_LEVELS.get(proxy["anonymity"].lower(), '-')))
                     sys.stdout.flush()
+                    if handle:
+                        os.write(handle, "%s%s" % (candidate, os.linesep))
     except Queue.Empty:
         pass
 
@@ -119,11 +117,11 @@ def run():
         proxies = _
 
 
-    _, filepath = tempfile.mkstemp(prefix="proxies", suffix=".txt")
-    os.close(_)
-    handle = open(filepath, "w+b")
-
-    sys.stdout.write("[i] storing results to '%s'...\n" % filepath)
+    if options.outputFile:
+        handle = os.open(options.outputFile, os.O_APPEND | os.O_CREAT | os.O_TRUNC | os.O_WRONLY)
+        sys.stdout.write("[i] storing results to '%s'...\n" % options.outputFile)
+    else:
+        handle = None
 
     queue = Queue.Queue()
     for proxy in proxies:
@@ -157,8 +155,8 @@ def run():
     finally:
         sys.stdout.flush()
         sys.stderr.flush()
-        handle.flush()
-        handle.close()
+        if handle:
+            os.close(handle)
         os._exit(0)
 
 def main():
@@ -169,6 +167,7 @@ def main():
     parser.add_option("--anonymity", dest="anonymity", help="Regex for filtering anonymity (e.g. \"anonymous|elite\")")
     parser.add_option("--country", dest="country", help="Regex for filtering country (e.g. \"china|brazil\")")
     parser.add_option("--max-latency", dest="maxLatency", type=float, help="Maximum (tolerable) latency in seconds (default %d)" % TIMEOUT)
+    parser.add_option("--output", dest="outputFile", help="Store resulting proxies to output file")
     parser.add_option("--threads", dest="threads", type=int, help="Number of scanning threads (default %d)" % THREADS)
     parser.add_option("--type", dest="type", help="Regex for filtering proxy type (e.g. \"http\")")
 
