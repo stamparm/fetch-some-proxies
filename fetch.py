@@ -17,7 +17,7 @@ import threading
 import time
 import urllib2
 
-VERSION = "3.0.1"
+VERSION = "3.0.2"
 BANNER = """
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+
 |f||e||t||c||h||-||s||o||m||e||-||p||r||o||x||i||e||s| <- v%s
@@ -62,7 +62,7 @@ def worker(queue, handle=None):
             sys.stdout.write("\r%s\r" % ROTATION_CHARS[counter[0] % len(ROTATION_CHARS)])
             sys.stdout.flush()
             start = time.time()
-            candidate = "%s://%s:%s" % (proxy["proto"], proxy["ip"], proxy["port"])
+            candidate = "%s://%s:%s" % (proxy["proto"].replace("https", "http"), proxy["ip"], proxy["port"])
             if not all((proxy["ip"], proxy["port"])) or re.search(r"[^:/\w.]", candidate):
                 continue
             if not FALLBACK_METHOD:
