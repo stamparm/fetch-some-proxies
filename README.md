@@ -11,8 +11,3 @@ Requirements
 ----
 
 [Python](http://www.python.org/download/) version **2.6.x** or **2.7.x** is required for running this program.
-
-Donations
----
-
-If you appreciate the work and you want to see it further developed, please consider making a donation via [PayPal](https://www.paypal.com/) to `miroslav.stampar@gmail.com` or via [&#x0243;itcoin](bitcoin:1JCtgmpC1eWvdHXrKfvMAunfvcaaMXLP5G) to `1JCtgmpC1eWvdHXrKfvMAunfvcaaMXLP5G`.
