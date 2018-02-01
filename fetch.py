@@ -17,7 +17,7 @@ import threading
 import time
 import urllib2
 
-VERSION = "3.0.2"
+VERSION = "3.0.3"
 BANNER = """
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+
 |f||e||t||c||h||-||s||o||m||e||-||p||r||o||x||i||e||s| <- v%s
@@ -127,7 +127,7 @@ def run():
     for proxy in proxies:
         queue.put(proxy)
 
-    sys.stdout.write("[i] testing %d proxies (%d threads)...\n\n" % (len(proxies), options.threads or THREADS))
+    sys.stdout.write("[i] testing %d proxies (%d threads)...\n\n" % (len(proxies) if not FALLBACK_METHOD else sum(proxy["proto"] in ("http", "https") for proxy in proxies), options.threads or THREADS))
     for _ in xrange(options.threads or THREADS):
         thread = threading.Thread(target=worker, args=[queue, handle])
         thread.daemon = True
