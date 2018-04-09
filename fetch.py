@@ -11,13 +11,14 @@ import os
 import Queue
 import random
 import re
+import socket
 import string
 import subprocess
 import threading
 import time
 import urllib2
 
-VERSION = "3.0.3"
+VERSION = "3.0.4"
 BANNER = """
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+
 |f||e||t||c||h||-||s||o||m||e||-||p||r||o||x||i||e||s| <- v%s
@@ -31,8 +32,10 @@ MAX_HELP_OPTION_LENGTH = 18
 PROXY_LIST_URL = "https://raw.githubusercontent.com/stamparm/aux/master/fetch-some-list.txt"
 ROTATION_CHARS = ('/', '-', '\\', '|')
 TIMEOUT = 10
-THREADS = 10
+THREADS = 20
 USER_AGENT = "curl/7.{curl_minor}.{curl_revision} (x86_64-pc-linux-gnu) libcurl/7.{curl_minor}.{curl_revision} OpenSSL/0.9.8{openssl_revision} zlib/1.2.{zlib_revision}".format(curl_minor=random.randint(8, 22), curl_revision=random.randint(1, 9), openssl_revision=random.choice(string.lowercase), zlib_revision=random.randint(2, 6))
+
+socket.setdefaulttimeout(TIMEOUT)
 
 if not subprocess.mswindows:
     BANNER = re.sub(r"\|(\w)\|", lambda _: "|\033[01;41m%s\033[00;49m|" % _.group(1), BANNER)
@@ -40,6 +43,24 @@ if not subprocess.mswindows:
 options = None
 counter = [0]
 threads = []
+
+def check_alive(address, port):
+    result = False
+
+    try:
+        s = socket.socket()
+        s.connect((address, port))
+        result = True
+    except:
+        pass
+    finally:
+        try:
+            s.shutdown(socket.SHUT_RDWR)
+            s.close()
+        except:
+            pass
+
+    return result
 
 def retrieve(url, data=None, headers={"User-agent": USER_AGENT}, timeout=TIMEOUT, opener=None):
     try:
@@ -64,6 +85,8 @@ def worker(queue, handle=None):
             start = time.time()
             candidate = "%s://%s:%s" % (proxy["proto"].replace("https", "http"), proxy["ip"], proxy["port"])
             if not all((proxy["ip"], proxy["port"])) or re.search(r"[^:/\w.]", candidate):
+                continue
+            if not check_alive(proxy["ip"], proxy["port"]):
                 continue
             if not FALLBACK_METHOD:
                 process = subprocess.Popen("curl -m %d -A \"%s\" --proxy %s %s" % (TIMEOUT, USER_AGENT, candidate, IFCONFIG_URL), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
