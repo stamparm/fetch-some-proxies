@@ -18,7 +18,7 @@ import threading
 import time
 import urllib2
 
-VERSION = "3.0.4"
+VERSION = "3.0.5"
 BANNER = """
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+
 |f||e||t||c||h||-||s||o||m||e||-||p||r||o||x||i||e||s| <- v%s
@@ -191,6 +191,19 @@ def run():
 def main():
     global options
 
+    if "--raw" in sys.argv:
+        sys._stdout = sys.stdout
+
+        class _:
+            def write(self, value):
+                if "//" in value:
+                    sys._stdout.write("%s\n" % value.split()[0])
+
+            def flush(self):
+                sys._stdout.flush()
+
+        sys.stderr = sys.stdout = _()
+
     sys.stdout.write("%s\n\n" % BANNER)
     parser = optparse.OptionParser(version=VERSION)
     parser.add_option("--anonymity", dest="anonymity", help="Regex for filtering anonymity (e.g. \"anonymous|elite\")")
@@ -198,6 +211,7 @@ def main():
     parser.add_option("--max-latency", dest="maxLatency", type=float, help="Maximum (tolerable) latency in seconds (default %d)" % TIMEOUT)
     parser.add_option("--output", dest="outputFile", help="Store resulting proxies to output file")
     parser.add_option("--port", dest="port", help="List of ports for filtering (e.g. \"1080,8000\")")
+    parser.add_option("--raw", dest="raw", action="store_false", help="Display only results (minimal verbosity)")
     parser.add_option("--threads", dest="threads", type=int, help="Number of scanning threads (default %d)" % THREADS)
     parser.add_option("--type", dest="type", help="Regex for filtering proxy type (e.g. \"http\")")
 
