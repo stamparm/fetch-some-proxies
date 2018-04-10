@@ -127,10 +127,16 @@ def run():
         exit("[!] something went wrong during the proxy list retrieval/parsing. Please check your network settings and try again")
     random.shuffle(proxies)
 
-    if options.country or options.anonymity or options.type:
+    if any((options.country, options.anonymity, options.type, options.port)):
         _ = []
+
+        if options.port:
+            options.port = set(int(_) for _ in re.findall(r"\d+", options.port))
+
         for proxy in proxies:
             if options.country and not re.search(options.country, proxy["country"], re.I):
+                continue
+            if options.port and not proxy["port"] in options.port:
                 continue
             if options.anonymity and not re.search(options.anonymity, "%s (%s)" % (proxy["anonymity"], ANONIMITY_LEVELS.get(proxy["anonymity"].lower(), "")), re.I):
                 continue
@@ -191,6 +197,7 @@ def main():
     parser.add_option("--country", dest="country", help="Regex for filtering country (e.g. \"china|brazil\")")
     parser.add_option("--max-latency", dest="maxLatency", type=float, help="Maximum (tolerable) latency in seconds (default %d)" % TIMEOUT)
     parser.add_option("--output", dest="outputFile", help="Store resulting proxies to output file")
+    parser.add_option("--port", dest="port", help="List of ports for filtering (e.g. \"1080,8000\")")
     parser.add_option("--threads", dest="threads", type=int, help="Number of scanning threads (default %d)" % THREADS)
     parser.add_option("--type", dest="type", help="Regex for filtering proxy type (e.g. \"http\")")
 
