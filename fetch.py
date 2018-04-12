@@ -18,7 +18,7 @@ import threading
 import time
 import urllib2
 
-VERSION = "3.0.5"
+VERSION = "3.0.6"
 BANNER = """
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+
 |f||e||t||c||h||-||s||o||m||e||-||p||r||o||x||i||e||s| <- v%s
@@ -111,6 +111,9 @@ def run():
     sys.stdout.write("[i] initial testing...\n")
 
     for candidate in IFCONFIG_CANDIDATES:
+        if options.noHttps:
+            candidate = candidate.replace("https://", "http://")
+
         result = retrieve(candidate)
         if re.search(r"\A\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\Z", (result or "").strip()):
             IFCONFIG_URL = candidate
@@ -209,6 +212,7 @@ def main():
     parser.add_option("--anonymity", dest="anonymity", help="Regex for filtering anonymity (e.g. \"anonymous|elite\")")
     parser.add_option("--country", dest="country", help="Regex for filtering country (e.g. \"china|brazil\")")
     parser.add_option("--max-latency", dest="maxLatency", type=float, help="Maximum (tolerable) latency in seconds (default %d)" % TIMEOUT)
+    parser.add_option("--no-https", dest="noHttps", action="store_true", help="Disable HTTPS checking (not recommended)")
     parser.add_option("--output", dest="outputFile", help="Store resulting proxies to output file")
     parser.add_option("--port", dest="port", help="List of ports for filtering (e.g. \"1080,8000\")")
     parser.add_option("--raw", dest="raw", action="store_false", help="Display only results (minimal verbosity)")
