@@ -5,7 +5,7 @@ Simple Python script for fetching "some" (usable) proxies. It fetches (periodica
 
 Why should you use it? Well, if you've ever used free proxy lists around you'll know the pain of finding actually working proxies. This tool will automatically do the list fetching and proxy testing for you. Also, only proxies that support HTTPS traffic will be returned, which guarantees access to majority of Internet sites.
 
-![fetch](https://i.imgur.com/Wtyn3GR.png)
+![fetch](https://i.imgur.com/WLWRGcA.png)
 
 Requirements
 ----
