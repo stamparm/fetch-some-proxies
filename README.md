@@ -10,4 +10,4 @@ Why should you use it? Well, if you've ever used free proxy lists around you'll 
 Requirements
 ----
 
-[Python](http://www.python.org/download/) version **2.6.x** or **2.7.x** is required for running this program.
+[Python](http://www.python.org/download/) version **3.6.x** is required for running this program.
