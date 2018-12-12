@@ -1,245 +1,35 @@
-#!/usr/bin/env python
-
-import sys
-
-if sys.version_info.major > 2:
-    exit("[!] please run this program with Python v2.x")
-
-import json
-import optparse
-import os
-import Queue
-import random
+#!/usr/bin/env python3
+import platform
+import click
 import re
-import socket
-import string
-import subprocess
-import threading
-import time
-import urllib2
-
-VERSION = "3.0.6"
-BANNER = """
-+-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+
-|f||e||t||c||h||-||s||o||m||e||-||p||r||o||x||i||e||s| <- v%s
-+-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+""".strip("\r\n") % VERSION
-
-ANONIMITY_LEVELS = {"high": "elite", "medium": "anonymous", "low": "transparent"}
-FALLBACK_METHOD = False
-IFCONFIG_CANDIDATES = ("https://ifconfig.co/ip", "https://api.ipify.org/?format=text", "https://ifconfig.io/ip", "https://myexternalip.com/raw", "https://wtfismyip.com/text", "https://icanhazip.com/", "https://ipv4bot.whatismyipaddress.com/", "https://ip4.seeip.org")
-IFCONFIG_URL = None
-MAX_HELP_OPTION_LENGTH = 18
-PROXY_LIST_URL = "https://raw.githubusercontent.com/stamparm/aux/master/fetch-some-list.txt"
-ROTATION_CHARS = ('/', '-', '\\', '|')
-TIMEOUT = 10
-THREADS = 20
-USER_AGENT = "curl/7.{curl_minor}.{curl_revision} (x86_64-pc-linux-gnu) libcurl/7.{curl_minor}.{curl_revision} OpenSSL/0.9.8{openssl_revision} zlib/1.2.{zlib_revision}".format(curl_minor=random.randint(8, 22), curl_revision=random.randint(1, 9), openssl_revision=random.choice(string.lowercase), zlib_revision=random.randint(2, 6))
-
-socket.setdefaulttimeout(TIMEOUT)
-
-if not subprocess.mswindows:
-    BANNER = re.sub(r"\|(\w)\|", lambda _: "|\033[01;41m%s\033[00;49m|" % _.group(1), BANNER)
-
-options = None
-counter = [0]
-threads = []
-
-def check_alive(address, port):
-    result = False
-
-    try:
-        s = socket.socket()
-        s.connect((address, port))
-        result = True
-    except:
-        pass
-    finally:
-        try:
-            s.shutdown(socket.SHUT_RDWR)
-            s.close()
-        except:
-            pass
-
-    return result
-
-def retrieve(url, data=None, headers={"User-agent": USER_AGENT}, timeout=TIMEOUT, opener=None):
-    try:
-        req = urllib2.Request("".join(url[i].replace(' ', "%20") if i > url.find('?') else url[i] for i in xrange(len(url))), data, headers)
-        retval = (urllib2.urlopen if not opener else opener.open)(req, timeout=timeout).read()
-    except Exception as ex:
-        try:
-            retval = ex.read() if hasattr(ex, "read") else getattr(ex, "msg", str())
-        except:
-            retval = None
-
-    return retval or ""
-
-def worker(queue, handle=None):
-    try:
-        while True:
-            proxy = queue.get_nowait()
-            result = ""
-            counter[0] += 1
-            sys.stdout.write("\r%s\r" % ROTATION_CHARS[counter[0] % len(ROTATION_CHARS)])
-            sys.stdout.flush()
-            start = time.time()
-            candidate = "%s://%s:%s" % (proxy["proto"].replace("https", "http"), proxy["ip"], proxy["port"])
-            if not all((proxy["ip"], proxy["port"])) or re.search(r"[^:/\w.]", candidate):
-                continue
-            if not check_alive(proxy["ip"], proxy["port"]):
-                continue
-            if not FALLBACK_METHOD:
-                process = subprocess.Popen("curl -m %d -A \"%s\" --proxy %s %s" % (TIMEOUT, USER_AGENT, candidate, IFCONFIG_URL), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                result, _ = process.communicate()
-            elif proxy["proto"] in ("http", "https"):
-                opener = urllib2.build_opener(urllib2.ProxyHandler({"http": candidate, "https": candidate}))
-                result = retrieve(IFCONFIG_URL, timeout=options.maxLatency or TIMEOUT, opener=opener)
-            if (result or "").strip() == proxy["ip"].encode("utf8"):
-                latency = time.time() - start
-                if latency < (options.maxLatency or TIMEOUT):
-                    sys.stdout.write("\r%s%s # latency: %.2f sec; country: %s; anonymity: %s (%s)\n" % (candidate, " " * (32 - len(candidate)), latency, ' '.join(_.capitalize() for _ in (proxy["country"].lower() or '-').split(' ')), proxy["type"], proxy["anonymity"]))
-                    sys.stdout.flush()
-                    if handle:
-                        os.write(handle, "%s%s" % (candidate, os.linesep))
-    except Queue.Empty:
-        pass
-
-def run():
-    global FALLBACK_METHOD
-    global IFCONFIG_URL
-
-    sys.stdout.write("[i] initial testing...\n")
-
-    for candidate in IFCONFIG_CANDIDATES:
-        if options.noHttps:
-            candidate = candidate.replace("https://", "http://")
-
-        result = retrieve(candidate)
-        if re.search(r"\A\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\Z", (result or "").strip()):
-            IFCONFIG_URL = candidate
-            break
-
-    process = subprocess.Popen("curl -m %d -A \"%s\" %s" % (TIMEOUT, USER_AGENT, IFCONFIG_URL), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, _ = process.communicate()
-    FALLBACK_METHOD = re.search(r"\d+\.\d+\.\d+\.\d+", stdout or "") is None
-
-    sys.stdout.write("[i] retrieving list of proxies...\n")
-    try:
-        proxies = json.loads(retrieve(PROXY_LIST_URL, headers={"User-agent": USER_AGENT}))
-    except:
-        exit("[!] something went wrong during the proxy list retrieval/parsing. Please check your network settings and try again")
-    random.shuffle(proxies)
-
-    if any((options.country, options.anonymity, options.type, options.port)):
-        _ = []
-
-        if options.port:
-            options.port = set(int(_) for _ in re.findall(r"\d+", options.port))
-
-        for proxy in proxies:
-            if options.country and not re.search(options.country, proxy["country"], re.I):
-                continue
-            if options.port and not proxy["port"] in options.port:
-                continue
-            if options.anonymity and not re.search(options.anonymity, "%s (%s)" % (proxy["anonymity"], ANONIMITY_LEVELS.get(proxy["anonymity"].lower(), "")), re.I):
-                continue
-            if options.type and not re.search(options.type, proxy["proto"], re.I):
-                continue
-            _.append(proxy)
-        proxies = _
+from config.clean import GetProxy
+search = GetProxy()
 
 
-    if options.outputFile:
-        handle = os.open(options.outputFile, os.O_APPEND | os.O_CREAT | os.O_TRUNC | os.O_WRONLY)
-        sys.stdout.write("[i] storing results to '%s'...\n" % options.outputFile)
-    else:
-        handle = None
+@click.command()
+@click.option('--anonymity','-an',default='high')
+@click.option('--country','-c',default=None)
+@click.option('--latency','-l',default=2)
+@click.option('--output','-o',default=None)
+@click.option('--thread','-t',default=4)
+def main(**options):
+    conn_params = {
+            'anonymity': options.get('anonymity'),
+            'country': options.get('country'),
+            'latency': options.get('latency'),
+            'output': options.get('output'),
+            'thread': options.get('thread')
+            }
 
-    queue = Queue.Queue()
-    for proxy in proxies:
-        queue.put(proxy)
-
-    sys.stdout.write("[i] testing %d proxies (%d threads)...\n\n" % (len(proxies) if not FALLBACK_METHOD else sum(proxy["proto"] in ("http", "https") for proxy in proxies), options.threads or THREADS))
-    for _ in xrange(options.threads or THREADS):
-        thread = threading.Thread(target=worker, args=[queue, handle])
-        thread.daemon = True
-
-        try:
-            thread.start()
-        except ThreadError as ex:
-            sys.stderr.write("[x] error occurred while starting new thread ('%s')" % ex.message)
-            break
-
-        threads.append(thread)
-
-    try:
-        alive = True
-        while alive:
-            alive = False
-            for thread in threads:
-                if thread.isAlive():
-                    alive = True
-                    time.sleep(0.1)
-    except KeyboardInterrupt:
-        sys.stderr.write("\r   \n[!] Ctrl-C pressed\n")
-    else:
-        sys.stdout.write("\n[i] done\n")
-    finally:
-        sys.stdout.flush()
-        sys.stderr.flush()
-        if handle:
-            os.close(handle)
-        os._exit(0)
-
-def main():
-    global options
-
-    if "--raw" in sys.argv:
-        sys._stdout = sys.stdout
-
-        class _:
-            def write(self, value):
-                if "//" in value:
-                    sys._stdout.write("%s\n" % value.split()[0])
-
-            def flush(self):
-                sys._stdout.flush()
-
-        sys.stderr = sys.stdout = _()
-
-    sys.stdout.write("%s\n\n" % BANNER)
-    parser = optparse.OptionParser(version=VERSION)
-    parser.add_option("--anonymity", dest="anonymity", help="Regex for filtering anonymity (e.g. \"anonymous|elite\")")
-    parser.add_option("--country", dest="country", help="Regex for filtering country (e.g. \"china|brazil\")")
-    parser.add_option("--max-latency", dest="maxLatency", type=float, help="Maximum (tolerable) latency in seconds (default %d)" % TIMEOUT)
-    parser.add_option("--no-https", dest="noHttps", action="store_true", help="Disable HTTPS checking (not recommended)")
-    parser.add_option("--output", dest="outputFile", help="Store resulting proxies to output file")
-    parser.add_option("--port", dest="port", help="List of ports for filtering (e.g. \"1080,8000\")")
-    parser.add_option("--raw", dest="raw", action="store_false", help="Display only results (minimal verbosity)")
-    parser.add_option("--threads", dest="threads", type=int, help="Number of scanning threads (default %d)" % THREADS)
-    parser.add_option("--type", dest="type", help="Regex for filtering proxy type (e.g. \"http\")")
-
-    # Dirty hack(s) for help message
-    def _(self, *args):
-        retVal = parser.formatter._format_option_strings(*args)
-        if len(retVal) > MAX_HELP_OPTION_LENGTH:
-            retVal = ("%%.%ds.." % (MAX_HELP_OPTION_LENGTH - parser.formatter.indent_increment)) % retVal
-        return retVal
-
-    parser.formatter._format_option_strings = parser.formatter.format_option_strings
-    parser.formatter.format_option_strings = type(parser.formatter.format_option_strings)(_, parser, type(parser))
-
-    for _ in ("-h", "--version"):
-        option = parser.get_option(_)
-        option.help = option.help.capitalize()
-
-    try:
-        options, _ = parser.parse_args()
-    except SystemExit:
-        print
-        raise
-
-    run()
+    banner()
+    search.run(**conn_params)
+def banner():
+    """ show me banner by use the re module and color"""
+    if platform.system() != 'Windows':
+        BANNER = re.sub(r"\|(\w)\|", lambda _: "|\033[01;41m%s\033[00;49m|" % _.group(1), GetProxy.BANNER)
+        print(BANNER)
 
 if __name__ == "__main__":
     main()
+
+    
