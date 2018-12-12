@@ -101,7 +101,7 @@ class GetProxy(Fields):
             :parm thread for set thread
         """
 
-        print("[!] initi testing....")
+        print("[!] initial testing....")
         GetProxy.LATENCY = options['latency']
         self.queue1 = queue.Queue()
         proxies = self._retrieve()
@@ -123,8 +123,7 @@ class GetProxy(Fields):
                     thread.daemon = True
                     thread.start()
                     GetProxy.threads.append(thread)
-                print("number thread for test is %d"%(len(GetProxy.threads)))
-                print("number proxy for test %d"%(self.queue1.qsize()))
+                print("[i] testing %d proxies(thread %d)" %(self.queue1.qsize(),len(GetProxy.threads)))
 
             try:
                 alive = True
