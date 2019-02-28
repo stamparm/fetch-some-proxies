@@ -27,7 +27,6 @@ BANNER = """
 ANONIMITY_LEVELS = {"high": "elite", "medium": "anonymous", "low": "transparent"}
 FALLBACK_METHOD = False
 IFCONFIG_CANDIDATES = ("https://ifconfig.co/ip", "https://api.ipify.org/?format=text", "https://ifconfig.io/ip", "https://myexternalip.com/raw", "https://wtfismyip.com/text", "https://icanhazip.com/", "https://ipv4bot.whatismyipaddress.com/", "https://ip4.seeip.org")
-IFCONFIG_URL = None
 MAX_HELP_OPTION_LENGTH = 18
 PROXY_LIST_URL = "https://raw.githubusercontent.com/stamparm/aux/master/fetch-some-list.txt"
 ROTATION_CHARS = ('/', '-', '\\', '|')
@@ -89,11 +88,11 @@ def worker(queue, handle=None):
             if not check_alive(proxy["ip"], proxy["port"]):
                 continue
             if not FALLBACK_METHOD:
-                process = subprocess.Popen("curl -m %d -A \"%s\" --proxy %s %s" % (TIMEOUT, USER_AGENT, candidate, IFCONFIG_URL), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                process = subprocess.Popen("curl -m %d -A \"%s\" --proxy %s %s" % (TIMEOUT, USER_AGENT, candidate, random_ifconfig()), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 result, _ = process.communicate()
             elif proxy["proto"] in ("http", "https"):
                 opener = urllib2.build_opener(urllib2.ProxyHandler({"http": candidate, "https": candidate}))
-                result = retrieve(IFCONFIG_URL, timeout=options.maxLatency or TIMEOUT, opener=opener)
+                result = retrieve(random_ifconfig(), timeout=options.maxLatency or TIMEOUT, opener=opener)
             if (result or "").strip() == proxy["ip"].encode("utf8"):
                 latency = time.time() - start
                 if latency < (options.maxLatency or TIMEOUT):
@@ -104,22 +103,20 @@ def worker(queue, handle=None):
     except Queue.Empty:
         pass
 
+def random_ifconfig():
+    retval = random.sample(IFCONFIG_CANDIDATES, 1)[0]
+
+    if options.noHttps:
+        retval = retval.replace("https://", "http://")
+
+    return retval
+
 def run():
     global FALLBACK_METHOD
-    global IFCONFIG_URL
 
     sys.stdout.write("[i] initial testing...\n")
 
-    for candidate in IFCONFIG_CANDIDATES:
-        if options.noHttps:
-            candidate = candidate.replace("https://", "http://")
-
-        result = retrieve(candidate)
-        if re.search(r"\A\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\Z", (result or "").strip()):
-            IFCONFIG_URL = candidate
-            break
-
-    process = subprocess.Popen("curl -m %d -A \"%s\" %s" % (TIMEOUT, USER_AGENT, IFCONFIG_URL), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen("curl -m %d -A \"%s\" %s" % (TIMEOUT, USER_AGENT, random_ifconfig()), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, _ = process.communicate()
     FALLBACK_METHOD = re.search(r"\d+\.\d+\.\d+\.\d+", stdout or "") is None
 
@@ -166,7 +163,7 @@ def run():
 
         try:
             thread.start()
-        except ThreadError as ex:
+        except threading.ThreadError as ex:
             sys.stderr.write("[x] error occurred while starting new thread ('%s')" % ex.message)
             break
 
@@ -221,10 +218,10 @@ def main():
 
     # Dirty hack(s) for help message
     def _(self, *args):
-        retVal = parser.formatter._format_option_strings(*args)
-        if len(retVal) > MAX_HELP_OPTION_LENGTH:
-            retVal = ("%%.%ds.." % (MAX_HELP_OPTION_LENGTH - parser.formatter.indent_increment)) % retVal
-        return retVal
+        retval = parser.formatter._format_option_strings(*args)
+        if len(retval) > MAX_HELP_OPTION_LENGTH:
+            retval = ("%%.%ds.." % (MAX_HELP_OPTION_LENGTH - parser.formatter.indent_increment)) % retval
+        return retval
 
     parser.formatter._format_option_strings = parser.formatter.format_option_strings
     parser.formatter.format_option_strings = type(parser.formatter.format_option_strings)(_, parser, type(parser))
