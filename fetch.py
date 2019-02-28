@@ -1,24 +1,53 @@
 #!/usr/bin/env python
 
-import sys
-
-if sys.version_info.major > 2:
-    exit("[!] please run this program with Python v2.x")
-
+import codecs
 import json
+import locale
 import optparse
 import os
-import Queue
 import random
 import re
 import socket
 import string
 import subprocess
+import sys
 import threading
 import time
-import urllib2
+import urllib
 
-VERSION = "3.0.6"
+if sys.version_info >= (3, 0):
+    import queue
+    import urllib.request
+
+    IS_WIN = subprocess._mswindows
+
+    build_opener = urllib.request.build_opener
+    install_opener = urllib.request.install_opener
+    quote = urllib.parse.quote
+    urlopen = urllib.request.urlopen
+    ProxyHandler = urllib.request.ProxyHandler
+    Queue = queue.Queue
+    Request = urllib.request.Request
+
+    xrange = range
+else:
+    import Queue
+    import urllib2
+
+    IS_WIN = subprocess.mswindows
+
+    build_opener = urllib2.build_opener
+    install_opener = urllib2.install_opener
+    quote = urllib.quote
+    urlopen = urllib2.urlopen
+    ProxyHandler = urllib2.ProxyHandler
+    Queue = Queue.Queue
+    Request = urllib2.Request
+
+    # Reference: http://blog.mathieu-leplatre.info/python-utf-8-print-fails-when-redirecting-stdout.html
+    sys.stdout = codecs.getwriter(locale.getpreferredencoding())(sys.stdout)
+
+VERSION = "3.1.1"
 BANNER = """
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+
 |f||e||t||c||h||-||s||o||m||e||-||p||r||o||x||i||e||s| <- v%s
@@ -32,11 +61,11 @@ PROXY_LIST_URL = "https://raw.githubusercontent.com/stamparm/aux/master/fetch-so
 ROTATION_CHARS = ('/', '-', '\\', '|')
 TIMEOUT = 10
 THREADS = 20
-USER_AGENT = "curl/7.{curl_minor}.{curl_revision} (x86_64-pc-linux-gnu) libcurl/7.{curl_minor}.{curl_revision} OpenSSL/0.9.8{openssl_revision} zlib/1.2.{zlib_revision}".format(curl_minor=random.randint(8, 22), curl_revision=random.randint(1, 9), openssl_revision=random.choice(string.lowercase), zlib_revision=random.randint(2, 6))
+USER_AGENT = "curl/7.{curl_minor}.{curl_revision} (x86_64-pc-linux-gnu) libcurl/7.{curl_minor}.{curl_revision} OpenSSL/0.9.8{openssl_revision} zlib/1.2.{zlib_revision}".format(curl_minor=random.randint(8, 22), curl_revision=random.randint(1, 9), openssl_revision=random.choice(string.ascii_lowercase), zlib_revision=random.randint(2, 6))
 
 socket.setdefaulttimeout(TIMEOUT)
 
-if not subprocess.mswindows:
+if not IS_WIN:
     BANNER = re.sub(r"\|(\w)\|", lambda _: "|\033[01;41m%s\033[00;49m|" % _.group(1), BANNER)
 
 options = None
@@ -63,15 +92,15 @@ def check_alive(address, port):
 
 def retrieve(url, data=None, headers={"User-agent": USER_AGENT}, timeout=TIMEOUT, opener=None):
     try:
-        req = urllib2.Request("".join(url[i].replace(' ', "%20") if i > url.find('?') else url[i] for i in xrange(len(url))), data, headers)
-        retval = (urllib2.urlopen if not opener else opener.open)(req, timeout=timeout).read()
+        req = Request("".join(url[i].replace(' ', "%20") if i > url.find('?') else url[i] for i in xrange(len(url))), data, headers)
+        retval = (urlopen if not opener else opener.open)(req, timeout=timeout).read()
     except Exception as ex:
         try:
             retval = ex.read() if hasattr(ex, "read") else getattr(ex, "msg", str())
         except:
             retval = None
 
-    return retval or ""
+    return (retval or "").decode("utf8")
 
 def worker(queue, handle=None):
     try:
@@ -91,7 +120,7 @@ def worker(queue, handle=None):
                 process = subprocess.Popen("curl -m %d -A \"%s\" --proxy %s %s" % (TIMEOUT, USER_AGENT, candidate, random_ifconfig()), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 result, _ = process.communicate()
             elif proxy["proto"] in ("http", "https"):
-                opener = urllib2.build_opener(urllib2.ProxyHandler({"http": candidate, "https": candidate}))
+                opener = build_opener(ProxyHandler({"http": candidate, "https": candidate}))
                 result = retrieve(random_ifconfig(), timeout=options.maxLatency or TIMEOUT, opener=opener)
             if (result or "").strip() == proxy["ip"].encode("utf8"):
                 latency = time.time() - start
@@ -118,7 +147,7 @@ def run():
 
     process = subprocess.Popen("curl -m %d -A \"%s\" %s" % (TIMEOUT, USER_AGENT, random_ifconfig()), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, _ = process.communicate()
-    FALLBACK_METHOD = re.search(r"\d+\.\d+\.\d+\.\d+", stdout or "") is None
+    FALLBACK_METHOD = re.search(r"\d+\.\d+\.\d+\.\d+", (stdout or "").decode("utf8")) is None
 
     sys.stdout.write("[i] retrieving list of proxies...\n")
     try:
@@ -152,7 +181,7 @@ def run():
     else:
         handle = None
 
-    queue = Queue.Queue()
+    queue = Queue()
     for proxy in proxies:
         queue.put(proxy)
 
@@ -224,7 +253,7 @@ def main():
         return retval
 
     parser.formatter._format_option_strings = parser.formatter.format_option_strings
-    parser.formatter.format_option_strings = type(parser.formatter.format_option_strings)(_, parser, type(parser))
+    parser.formatter.format_option_strings = type(parser.formatter.format_option_strings)(_, parser)
 
     for _ in ("-h", "--version"):
         option = parser.get_option(_)
