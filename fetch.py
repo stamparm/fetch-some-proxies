@@ -63,14 +63,13 @@ TIMEOUT = 10
 THREADS = 20
 USER_AGENT = "curl/7.{curl_minor}.{curl_revision} (x86_64-pc-linux-gnu) libcurl/7.{curl_minor}.{curl_revision} OpenSSL/0.9.8{openssl_revision} zlib/1.2.{zlib_revision}".format(curl_minor=random.randint(8, 22), curl_revision=random.randint(1, 9), openssl_revision=random.choice(string.ascii_lowercase), zlib_revision=random.randint(2, 6))
 
-socket.setdefaulttimeout(TIMEOUT)
-
 if not IS_WIN:
     BANNER = re.sub(r"\|(\w)\|", lambda _: "|\033[01;41m%s\033[00;49m|" % _.group(1), BANNER)
 
 options = None
 counter = [0]
 threads = []
+timeout = TIMEOUT
 
 def check_alive(address, port):
     result = False
@@ -90,7 +89,7 @@ def check_alive(address, port):
 
     return result
 
-def retrieve(url, data=None, headers={"User-agent": USER_AGENT}, timeout=TIMEOUT, opener=None):
+def retrieve(url, data=None, headers={"User-agent": USER_AGENT}, timeout=timeout, opener=None):
     try:
         req = Request("".join(url[i].replace(' ', "%20") if i > url.find('?') else url[i] for i in xrange(len(url))), data, headers)
         retval = (urlopen if not opener else opener.open)(req, timeout=timeout).read()
@@ -117,14 +116,14 @@ def worker(queue, handle=None):
             if not check_alive(proxy["ip"], proxy["port"]):
                 continue
             if not FALLBACK_METHOD:
-                process = subprocess.Popen("curl -m %d -A \"%s\" --proxy %s %s" % (TIMEOUT, USER_AGENT, candidate, random_ifconfig()), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                process = subprocess.Popen("curl -m %d -A \"%s\" --proxy %s %s" % (timeout, USER_AGENT, candidate, random_ifconfig()), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 result, _ = process.communicate()
             elif proxy["proto"] in ("http", "https"):
                 opener = build_opener(ProxyHandler({"http": candidate, "https": candidate}))
-                result = retrieve(random_ifconfig(), timeout=options.maxLatency or TIMEOUT, opener=opener)
+                result = retrieve(random_ifconfig(), timeout=timeout, opener=opener)
             if (result or "").strip() == proxy["ip"].encode("utf8"):
                 latency = time.time() - start
-                if latency < (options.maxLatency or TIMEOUT):
+                if latency < timeout:
                     sys.stdout.write("\r%s%s # latency: %.2f sec; country: %s; anonymity: %s (%s)\n" % (candidate, " " * (32 - len(candidate)), latency, ' '.join(_.capitalize() for _ in (proxy["country"].lower() or '-').split(' ')), proxy["type"], proxy["anonymity"]))
                     sys.stdout.flush()
                     if handle:
@@ -142,8 +141,12 @@ def random_ifconfig():
 
 def run():
     global FALLBACK_METHOD
+    global timeout
 
     sys.stdout.write("[i] initial testing...\n")
+
+    timeout = min(options.timeout or sys.maxint, options.maxLatency or sys.maxint, TIMEOUT)
+    socket.setdefaulttimeout(timeout)
 
     process = subprocess.Popen("curl -m %d -A \"%s\" %s" % (TIMEOUT, USER_AGENT, random_ifconfig()), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, _ = process.communicate()
@@ -243,6 +246,7 @@ def main():
     parser.add_option("--port", dest="port", help="List of ports for filtering (e.g. \"1080,8000\")")
     parser.add_option("--raw", dest="raw", action="store_false", help="Display only results (minimal verbosity)")
     parser.add_option("--threads", dest="threads", type=int, help="Number of scanning threads (default %d)" % THREADS)
+    parser.add_option("--timeout", dest="timeout", type=int, help="Request timeout in seconds (default %d)" % TIMEOUT)
     parser.add_option("--type", dest="type", help="Regex for filtering proxy type (e.g. \"http\")")
 
     # Dirty hack(s) for help message
