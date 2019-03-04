@@ -55,7 +55,7 @@ BANNER = """
 
 ANONIMITY_LEVELS = {"high": "elite", "medium": "anonymous", "low": "transparent"}
 FALLBACK_METHOD = False
-IFCONFIG_CANDIDATES = ("https://ifconfig.co/ip", "https://api.ipify.org/?format=text", "https://ifconfig.io/ip", "https://myexternalip.com/raw", "https://wtfismyip.com/text", "https://icanhazip.com/", "https://ipv4bot.whatismyipaddress.com/", "https://ip4.seeip.org")
+IFCONFIG_CANDIDATES = ("https://api.ipify.org/?format=text", "https://myexternalip.com/raw", "https://wtfismyip.com/text", "https://icanhazip.com/", "https://ipv4bot.whatismyipaddress.com/", "https://ip4.seeip.org")
 MAX_HELP_OPTION_LENGTH = 18
 PROXY_LIST_URL = "https://raw.githubusercontent.com/stamparm/aux/master/fetch-some-list.txt"
 ROTATION_CHARS = ('/', '-', '\\', '|')
@@ -128,7 +128,7 @@ def worker(queue, handle=None):
                     sys.stdout.flush()
                     if handle:
                         os.write(handle, "%s%s" % (candidate, os.linesep))
-    except Queue.Empty:
+    except:
         pass
 
 def random_ifconfig():
@@ -145,7 +145,7 @@ def run():
 
     sys.stdout.write("[i] initial testing...\n")
 
-    timeout = min(options.timeout or sys.maxint, options.maxLatency or sys.maxint, TIMEOUT)
+    timeout = min(options.timeout or sys.maxsize, options.maxLatency or sys.maxsize, TIMEOUT)
     socket.setdefaulttimeout(timeout)
 
     process = subprocess.Popen("curl -m %d -A \"%s\" %s" % (TIMEOUT, USER_AGENT, random_ifconfig()), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
