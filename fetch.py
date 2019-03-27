@@ -47,7 +47,7 @@ else:
     # Reference: http://blog.mathieu-leplatre.info/python-utf-8-print-fails-when-redirecting-stdout.html
     sys.stdout = codecs.getwriter(locale.getpreferredencoding())(sys.stdout)
 
-VERSION = "3.1.1"
+VERSION = "3.1.2"
 BANNER = """
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+
 |f||e||t||c||h||-||s||o||m||e||-||p||r||o||x||i||e||s| <- v%s
@@ -187,6 +187,9 @@ def run():
     queue = Queue()
     for proxy in proxies:
         queue.put(proxy)
+
+    if len(proxies) == 0:
+        exit("[!] no proxies found")
 
     sys.stdout.write("[i] testing %d proxies (%d threads)...\n\n" % (len(proxies) if not FALLBACK_METHOD else sum(proxy["proto"] in ("http", "https") for proxy in proxies), options.threads or THREADS))
     for _ in xrange(options.threads or THREADS):
