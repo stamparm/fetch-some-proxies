@@ -127,7 +127,7 @@ def worker(queue, handle=None):
                     sys.stdout.write("\r%s%s # latency: %.2f sec; country: %s; anonymity: %s (%s)\n" % (candidate, " " * (32 - len(candidate)), latency, ' '.join(_.capitalize() for _ in (proxy["country"].lower() or '-').split(' ')), proxy["type"], proxy["anonymity"]))
                     sys.stdout.flush()
                     if handle:
-                        os.write(handle, "%s%s" % (candidate, os.linesep))
+                        os.write(handle, ("%s%s" % (candidate, os.linesep)).encode("utf8"))
     except:
         pass
 
