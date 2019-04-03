@@ -47,7 +47,7 @@ else:
     # Reference: http://blog.mathieu-leplatre.info/python-utf-8-print-fails-when-redirecting-stdout.html
     sys.stdout = codecs.getwriter(locale.getpreferredencoding())(sys.stdout)
 
-VERSION = "3.1.2"
+VERSION = "3.2.0"
 BANNER = """
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+
 |f||e||t||c||h||-||s||o||m||e||-||p||r||o||x||i||e||s| <- v%s
