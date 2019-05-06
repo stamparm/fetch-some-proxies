@@ -269,7 +269,8 @@ def main():
     try:
         options, _ = parser.parse_args()
     except SystemExit:
-        print
+        sys.stdout.write("\n")
+        sys.stdout.flush()
         raise
 
     run()
