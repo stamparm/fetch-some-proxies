@@ -10,4 +10,4 @@ Why should you use it? Well, if you've ever used free proxy lists around you'll 
 Requirements
 ----
 
-**fetch-some-proxies** works out of the box with any Python version from **2.6.x** to **3.7.x** on any platform.
+**fetch-some-proxies** works out of the box with any Python version from **2.6.x** to **3.x** on any platform.
