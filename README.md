@@ -11,3 +11,16 @@ Requirements
 ----
 
 **fetch-some-proxies** works out of the box with any Python version from **2.6.x** to **3.x** on any platform.
+
+# Installation
+
+## Linux
+
+```sh
+curl https://raw.githubusercontent.com/stamparm/fetch-some-proxies/master/fetch.py -o ~/.local/bin/fetch-some-proxies
+chmod +x ~/.local/bin/fetch-some-proxies
+```
+
+## Windows
+
+Download the script and run it.
