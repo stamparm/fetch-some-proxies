@@ -19,8 +19,6 @@ if sys.version_info >= (3, 0):
     import queue
     import urllib.request
 
-    IS_WIN = subprocess._mswindows
-
     build_opener = urllib.request.build_opener
     install_opener = urllib.request.install_opener
     quote = urllib.parse.quote
@@ -33,8 +31,6 @@ if sys.version_info >= (3, 0):
 else:
     import Queue
     import urllib2
-
-    IS_WIN = subprocess.mswindows
 
     build_opener = urllib2.build_opener
     install_opener = urllib2.install_opener
@@ -56,6 +52,7 @@ BANNER = """
 ANONIMITY_LEVELS = {"high": "elite", "medium": "anonymous", "low": "transparent"}
 FALLBACK_METHOD = False
 IFCONFIG_CANDIDATES = ("https://api.ipify.org/?format=text", "https://myexternalip.com/raw", "https://wtfismyip.com/text", "https://icanhazip.com/", "https://ipv4bot.whatismyipaddress.com/", "https://ip4.seeip.org")
+IS_WIN = os.name == "nt"
 MAX_HELP_OPTION_LENGTH = 18
 PROXY_LIST_URL = "https://raw.githubusercontent.com/stamparm/aux/master/fetch-some-list.txt"
 ROTATION_CHARS = ('/', '-', '\\', '|')
