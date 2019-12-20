@@ -150,10 +150,11 @@ def run():
     FALLBACK_METHOD = re.search(r"\d+\.\d+\.\d+\.\d+", (stdout or "").decode("utf8")) is None
 
     sys.stdout.write("[i] retrieving list of proxies...\n")
-    try:
-        proxies = json.loads(retrieve(PROXY_LIST_URL, headers={"User-agent": USER_AGENT}))
-    except:
-        exit("[!] something went wrong during the proxy list retrieval/parsing. Please check your network settings and try again")
+    content = retrieve(PROXY_LIST_URL, headers={"User-agent": USER_AGENT})
+    if not all(_ in content for _ in ("proto", "country", "anonymity")):
+        exit("[!] something went wrong during the proxy list retrieval/parsing ('%s'). Please check your network settings and try again" % content[:100])
+
+    proxies = json.loads(content)
     random.shuffle(proxies)
 
     if any((options.country, options.anonymity, options.type, options.port)):
@@ -173,7 +174,6 @@ def run():
                 continue
             _.append(proxy)
         proxies = _
-
 
     if options.outputFile:
         handle = os.open(options.outputFile, os.O_APPEND | os.O_CREAT | os.O_TRUNC | os.O_WRONLY)
