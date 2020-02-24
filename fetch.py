@@ -43,7 +43,7 @@ else:
     # Reference: http://blog.mathieu-leplatre.info/python-utf-8-print-fails-when-redirecting-stdout.html
     sys.stdout = codecs.getwriter(locale.getpreferredencoding())(sys.stdout)
 
-VERSION = "3.2.0"
+VERSION = "3.2.1"
 BANNER = """
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+
 |f||e||t||c||h||-||s||o||m||e||-||p||r||o||x||i||e||s| <- v%s
@@ -146,8 +146,11 @@ def run():
     socket.setdefaulttimeout(timeout)
 
     process = subprocess.Popen("curl -m %d -A \"%s\" %s" % (TIMEOUT, USER_AGENT, random_ifconfig()), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, _ = process.communicate()
-    FALLBACK_METHOD = re.search(r"\d+\.\d+\.\d+\.\d+", (stdout or "").decode("utf8")) is None
+    stdout, stderr = process.communicate()
+    FALLBACK_METHOD = re.search(r"\d+\.\d+\.\d+\.\d+", (stdout or b"").decode("utf8")) is None
+
+    if stderr and any(_ in stderr for _ in (b"not found", b"not recognized")):
+        sys.stdout.write("[x] command 'curl' not available\n")
 
     sys.stdout.write("[i] retrieving list of proxies...\n")
     content = retrieve(PROXY_LIST_URL, headers={"User-agent": USER_AGENT})
