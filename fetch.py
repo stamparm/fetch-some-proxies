@@ -96,7 +96,7 @@ def retrieve(url, data=None, headers={"User-agent": USER_AGENT}, timeout=timeout
         except:
             retval = None
 
-    return (retval or "").decode("utf8")
+    return (retval or b"").decode("utf8")
 
 def worker(queue, handle=None):
     try:
