@@ -57,7 +57,7 @@ PROXY_LIST_URL = "https://raw.githubusercontent.com/stamparm/aux/master/fetch-so
 ROTATION_CHARS = ('/', '-', '\\', '|')
 TIMEOUT = 10
 THREADS = 20
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
+USER_AGENT = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:88.0) Gecko/20100101 Firefox/88.0"
 
 if not IS_WIN:
     BANNER = re.sub(r"\|(\w)\|", lambda _: "|\033[01;41m%s\033[00;49m|" % _.group(1), BANNER)
