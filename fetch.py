@@ -42,7 +42,7 @@ else:
     # Reference: http://blog.mathieu-leplatre.info/python-utf-8-print-fails-when-redirecting-stdout.html
     sys.stdout = codecs.getwriter(locale.getpreferredencoding())(sys.stdout)
 
-VERSION = "3.2.3"
+VERSION = "3.2.4"
 BANNER = """
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+
 |f||e||t||c||h||-||s||o||m||e||-||p||r||o||x||i||e||s| <- v%s
@@ -50,7 +50,7 @@ BANNER = """
 
 ANONIMITY_LEVELS = {"high": "elite", "medium": "anonymous", "low": "transparent"}
 FALLBACK_METHOD = False
-IFCONFIG_CANDIDATES = ("https://api.ipify.org/?format=text", "https://myexternalip.com/raw", "https://wtfismyip.com/text", "https://icanhazip.com/", "https://ipv4bot.whatismyipaddress.com/", "https://ip4.seeip.org")
+IFCONFIG_CANDIDATES = ("https://api.ipify.org/?format=text", "https://myexternalip.com/raw", "https://wtfismyip.com/text", "https://icanhazip.com/", "https://ip4.seeip.org")
 IS_WIN = os.name == "nt"
 MAX_HELP_OPTION_LENGTH = 18
 PROXY_LIST_URL = "https://raw.githubusercontent.com/stamparm/aux/master/fetch-some-list.txt"
