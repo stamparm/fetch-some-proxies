@@ -1,8 +1,5 @@
 #!/usr/bin/env python
-
-import codecs
 import json
-import locale
 import optparse
 import os
 import random
@@ -13,65 +10,51 @@ import sys
 import threading
 import time
 import urllib
+import queue
+import urllib.request
+from typing import Optional
 
-if sys.version_info >= (3, 0):
-    import queue
-    import urllib.request
+build_opener = urllib.request.build_opener
+install_opener = urllib.request.install_opener
+quote = urllib.parse.quote
+urlopen = urllib.request.urlopen
+ProxyHandler = urllib.request.ProxyHandler
+Queue = queue.Queue
+Request = urllib.request.Request
 
-    build_opener = urllib.request.build_opener
-    install_opener = urllib.request.install_opener
-    quote = urllib.parse.quote
-    urlopen = urllib.request.urlopen
-    ProxyHandler = urllib.request.ProxyHandler
-    Queue = queue.Queue
-    Request = urllib.request.Request
+xrange = range
 
-    xrange = range
-else:
-    import Queue
-    import urllib2
 
-    build_opener = urllib2.build_opener
-    install_opener = urllib2.install_opener
-    quote = urllib.quote
-    urlopen = urllib2.urlopen
-    ProxyHandler = urllib2.ProxyHandler
-    Queue = Queue.Queue
-    Request = urllib2.Request
-
-    # Reference: http://blog.mathieu-leplatre.info/python-utf-8-print-fails-when-redirecting-stdout.html
-    sys.stdout = codecs.getwriter(locale.getpreferredencoding())(sys.stdout)
-
-VERSION = "3.2.4"
-BANNER = """
+VERSION: str = "3.2.4"
+BANNER: str = """
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+
 |f||e||t||c||h||-||s||o||m||e||-||p||r||o||x||i||e||s| <- v%s
 +-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-++-+""".strip("\r\n") % VERSION
 
-ANONIMITY_LEVELS = {"high": "elite", "medium": "anonymous", "low": "transparent"}
-FALLBACK_METHOD = False
-IFCONFIG_CANDIDATES = ("https://api.ipify.org/?format=text", "https://myexternalip.com/raw", "https://wtfismyip.com/text", "https://icanhazip.com/", "https://ip4.seeip.org")
-IS_WIN = os.name == "nt"
-MAX_HELP_OPTION_LENGTH = 18
-PROXY_LIST_URL = "https://raw.githubusercontent.com/stamparm/aux/master/fetch-some-list.txt"
-ROTATION_CHARS = ('/', '-', '\\', '|')
-TIMEOUT = 10
-THREADS = 20
-USER_AGENT = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:88.0) Gecko/20100101 Firefox/88.0"
+ANONIMITY_LEVELS: dict[str, str] = {"high": "elite", "medium": "anonymous", "low": "transparent"}
+FALLBACK_METHOD: bool = False
+IFCONFIG_CANDIDATES: tuple[str, ...] = ("https://api.ipify.org/?format=text", "https://myexternalip.com/raw", "https://wtfismyip.com/text", "https://icanhazip.com/", "https://ip4.seeip.org")
+IS_WIN: bool = os.name == "nt"
+MAX_HELP_OPTION_LENGTH: int = 18
+PROXY_LIST_URL: str = "https://raw.githubusercontent.com/stamparm/aux/master/fetch-some-list.txt"
+ROTATION_CHARS: tuple[str, ...] = ('/', '-', '\\', '|')
+TIMEOUT: int = 10
+THREADS: int = 20
+USER_AGENT: str = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:88.0) Gecko/20100101 Firefox/88.0"
 
 if not IS_WIN:
     BANNER = re.sub(r"\|(\w)\|", lambda _: "|\033[01;41m%s\033[00;49m|" % _.group(1), BANNER)
 
-options = None
-counter = [0]
-threads = []
-timeout = TIMEOUT
+options: None = None
+counter: list[int] = [0]
+threads: list[int] = []
+timeout: int = TIMEOUT
 
-def check_alive(address, port):
-    result = False
+def check_alive(address: str, port: int) -> bool:
+    result: bool  = False
 
     try:
-        s = socket.socket()
+        s: socket = socket.socket()
         s.connect((address, port))
         result = True
     except:
@@ -85,40 +68,46 @@ def check_alive(address, port):
 
     return result
 
-def retrieve(url, data=None, headers={"User-agent": USER_AGENT}, timeout=timeout, opener=None):
+def retrieve(
+    url: str, 
+    data: Optional[bytes] = None, 
+    headers: Optional[dict[str, str]] = {"User-agent": USER_AGENT}, 
+    timeout: Optional[int] = timeout, 
+    opener: Optional[object] = None
+) -> str:
     try:
-        req = Request("".join(url[i].replace(' ', "%20") if i > url.find('?') else url[i] for i in xrange(len(url))), data, headers)
+        req: Request = Request("".join(url[i].replace(' ', "%20") if i > url.find('?') else url[i] for i in range(len(url))), data, headers)
         retval = (urlopen if not opener else opener.open)(req, timeout=timeout).read()
     except Exception as ex:
         try:
-            retval = ex.read() if hasattr(ex, "read") else getattr(ex, "msg", str())
+            retval: str = ex.read() if hasattr(ex, "read") else getattr(ex, "msg", str())
         except:
             retval = None
 
     return (retval or b"").decode("utf8")
 
-def worker(queue, handle=None):
+def worker(queue: Queue, handle: Optional[int] = None) -> None:
     try:
         while True:
             proxy = queue.get_nowait()
-            result = ""
+            result: str = ""
             counter[0] += 1
             sys.stdout.write("\r%s\r" % ROTATION_CHARS[counter[0] % len(ROTATION_CHARS)])
             sys.stdout.flush()
-            start = time.time()
-            candidate = "%s://%s:%s" % (proxy["proto"].replace("https", "http"), proxy["ip"], proxy["port"])
+            start: float = time.time()
+            candidate: str = "%s://%s:%s" % (proxy["proto"].replace("https", "http"), proxy["ip"], proxy["port"])
             if not all((proxy["ip"], proxy["port"])) or re.search(r"[^:/\w.]", candidate):
                 continue
             if not check_alive(proxy["ip"], proxy["port"]):
                 continue
             if not FALLBACK_METHOD:
-                process = subprocess.Popen("curl -m %d -A \"%s\" --proxy %s %s" % (timeout, USER_AGENT, candidate, random_ifconfig()), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                process: Popen[bytes] = subprocess.Popen("curl -m %d -A \"%s\" --proxy %s %s" % (timeout, USER_AGENT, candidate, random_ifconfig()), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 result, _ = process.communicate()
             elif proxy["proto"] in ("http", "https"):
-                opener = build_opener(ProxyHandler({"http": candidate, "https": candidate}))
+                opener: OpenerDirector = build_opener(ProxyHandler({"http": candidate, "https": candidate}))
                 result = retrieve(random_ifconfig(), timeout=timeout, opener=opener)
             if (result or "").strip() == proxy["ip"].encode("utf8"):
-                latency = time.time() - start
+                latency: float = time.time() - start
                 if latency < timeout:
                     sys.stdout.write("\r%s%s # latency: %.2f sec; country: %s; anonymity: %s (%s)\n" % (candidate, " " * (32 - len(candidate)), latency, ' '.join(_.capitalize() for _ in (proxy["country"].lower() or '-').split(' ')), proxy["type"], proxy["anonymity"]))
                     sys.stdout.flush()
@@ -126,9 +115,9 @@ def worker(queue, handle=None):
                         os.write(handle, ("%s%s" % (candidate, os.linesep)).encode("utf8"))
     except:
         pass
-
-def random_ifconfig():
-    retval = random.sample(IFCONFIG_CANDIDATES, 1)[0]
+    
+def random_ifconfig() -> str:
+    retval: str = random.sample(IFCONFIG_CANDIDATES, 1)[0]
 
     if options.noHttps:
         retval = retval.replace("https://", "http://")
@@ -144,7 +133,7 @@ def run():
     timeout = min(options.timeout or sys.maxsize, options.maxLatency or sys.maxsize, TIMEOUT)
     socket.setdefaulttimeout(timeout)
 
-    process = subprocess.Popen("curl -m %d -A \"%s\" %s" % (TIMEOUT, USER_AGENT, random_ifconfig()), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process: Popen[bytes] = subprocess.Popen("curl -m %d -A \"%s\" %s" % (TIMEOUT, USER_AGENT, random_ifconfig()), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
     FALLBACK_METHOD = re.search(r"\d+\.\d+\.\d+\.\d+", (stdout or b"").decode("utf8")) is None
 
@@ -160,7 +149,7 @@ def run():
     random.shuffle(proxies)
 
     if any((options.country, options.anonymity, options.type, options.port)):
-        _ = []
+        _: list = []
 
         if options.port:
             options.port = set(int(_) for _ in re.findall(r"\d+", options.port))
@@ -175,10 +164,10 @@ def run():
             if options.type and not re.search(options.type, proxy["proto"], re.I):
                 continue
             _.append(proxy)
-        proxies = _
+        proxies: list = _
 
     if options.outputFile:
-        handle = os.open(options.outputFile, os.O_APPEND | os.O_CREAT | os.O_TRUNC | os.O_WRONLY)
+        handle: int = os.open(options.outputFile, os.O_APPEND | os.O_CREAT | os.O_TRUNC | os.O_WRONLY)
         sys.stdout.write("[i] storing results to '%s'...\n" % options.outputFile)
     else:
         handle = None
@@ -204,7 +193,7 @@ def run():
         threads.append(thread)
 
     try:
-        alive = True
+        alive: bool = True
         while alive:
             alive = False
             for thread in threads:
@@ -229,11 +218,11 @@ def main():
         sys._stdout = sys.stdout
 
         class _:
-            def write(self, value):
+            def write(self, value) -> None:
                 if "//" in value:
                     sys._stdout.write("%s\n" % value.split()[0])
 
-            def flush(self):
+            def flush(self) -> None:
                 sys._stdout.flush()
 
         sys.stderr = sys.stdout = _()
